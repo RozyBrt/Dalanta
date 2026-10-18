@@ -41,7 +41,9 @@ export default function CourierDashboard() {
     toggleSound,
     isSupabaseConfigured,
     syncAllToSupabase,
-    isSyncing
+    isSyncing,
+    realtimeStatus,
+    latestIncomingOrderId
   } = useOrders()
 
   const [filter, setFilter] = useState('all') // 'all', 'pending', 'active', 'completed'
@@ -290,7 +292,7 @@ export default function CourierDashboard() {
             return (
               <div 
                 key={order.id}
-                className="bg-white rounded-3xl border border-slate-200/90 shadow-xs hover:shadow-sm transition-all overflow-hidden"
+                className={`rounded-3xl border transition-all overflow-hidden ${order.id === latestIncomingOrderId ? "bg-emerald-50/60 border-emerald-500 shadow-md ring-2 ring-emerald-400 animate-pulse" : "bg-white border-slate-200/90 shadow-xs hover:shadow-sm"}`}
               >
                 {/* Order Card Header */}
                 <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
@@ -583,4 +585,5 @@ export default function CourierDashboard() {
     </section>
   )
 }
+
 

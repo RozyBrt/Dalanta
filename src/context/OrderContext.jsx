@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
+﻿import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { 
   ORDER_STATUS, 
   SERVICE_TYPES, 
@@ -6,7 +6,6 @@ import {
   getNextStatus, 
   generateOrderId 
 } from '../models/order'
-import { INITIAL_ORDERS } from '../data/mockOrders'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { playOrderNotificationSound } from '../lib/audioNotifier'
 
@@ -31,7 +30,6 @@ export function OrderProvider({ children }) {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
-        // Bersihkan data dummy lama jika ada di localStorage
         return parsed.filter((o) => !DUMMY_IDS.has(o.id))
       }
     } catch (e) {
@@ -59,6 +57,8 @@ export function OrderProvider({ children }) {
     }
   })
 
+  const [realtimeStatus, setRealtimeStatus] = useState('connecting') // 'connected' | 'connecting' | 'disconnected'
+  const [latestIncomingOrderId, setLatestIncomingOrderId] = useState(null)
   const [isSyncing, setIsSyncing] = useState(false)
 
   // Local storage persistence (tanpa data dummy)
@@ -95,20 +95,22 @@ export function OrderProvider({ children }) {
   }, [isSoundEnabled])
 
   // ==========================================
-  // REAL-TIME SYNC ENGINE (Supabase / BroadcastChannel)
+  // REAL-TIME WEBSOCKET ENGINE (SUPABASE REALTIME)
   // ==========================================
   useEffect(() => {
     let broadcast = null
 
     if (isSupabaseConfigured && supabase) {
-      // 1. Ambil data dari Supabase
+      console.log('[Dalanta Realtime] Menginisialisasi koneksi WebSocket ke Supabase...')
+
+      // 1. Ambil data pesanan awal dari Supabase
       supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
           if (error) {
-            console.error('[Dalanta] Gagal query Supabase:', error.message)
+            console.error('[Dalanta Realtime] Gagal mengambil data awal:', error.message)
           } else if (data) {
             const mapped = data
               .filter((d) => !DUMMY_IDS.has(d.id))
@@ -130,13 +132,17 @@ export function OrderProvider({ children }) {
           }
         })
 
-      // 2. Langganan WebSocket Realtime Supabase
-      const channel = supabase
-        .channel('realtime_orders')
+      // 2. Buat saluran Realtime WebSocket unik
+      const channelId = 'dalanta-orders-live-' + Math.floor(Math.random() * 10000)
+      const channel = supabase.channel(channelId)
+
+      channel
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders' },
           (payload) => {
+            console.log('%c[Dalanta Realtime Event] ' + payload.eventType, 'color: #059669; font-weight: bold;', payload)
+
             if (payload.eventType === 'INSERT') {
               const newRow = payload.new
               if (DUMMY_IDS.has(newRow.id)) return
@@ -155,8 +161,17 @@ export function OrderProvider({ children }) {
                 createdAt: newRow.created_at,
                 updatedAt: newRow.updated_at,
               }
+
+              // Masukkan order baru langsung di paling atas
               setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)])
+              setLatestIncomingOrderId(newOrder.id)
               notifyNewOrder()
+
+              // Hilangkan highlight setelah 4 detik
+              setTimeout(() => {
+                setLatestIncomingOrderId((curr) => (curr === newOrder.id ? null : curr))
+              }, 4000)
+
             } else if (payload.eventType === 'UPDATE') {
               const updatedRow = payload.new
               setOrders((prev) =>
@@ -164,18 +179,37 @@ export function OrderProvider({ children }) {
                   o.id === updatedRow.id
                     ? {
                         ...o,
-                        status: updatedRow.status,
-                        updatedAt: updatedRow.updated_at,
+                        customerName: updatedRow.customer_name || o.customerName,
+                        customerPhone: updatedRow.customer_phone || o.customerPhone,
+                        pickupAddress: updatedRow.pickup_address || o.pickupAddress,
+                        dropoffAddress: updatedRow.dropoff_address || o.dropoffAddress,
+                        serviceType: updatedRow.service_type || o.serviceType,
+                        bailoutAmount: Number(updatedRow.bailout_amount ?? o.bailoutAmount),
+                        notes: updatedRow.notes ?? o.notes,
+                        status: updatedRow.status || o.status,
+                        updatedAt: updatedRow.updated_at || new Date().toISOString(),
                       }
                     : o
                 )
               )
             } else if (payload.eventType === 'DELETE') {
-              setOrders((prev) => prev.filter((o) => o.id !== payload.old.id))
+              const deletedId = payload.old?.id
+              if (deletedId) {
+                setOrders((prev) => prev.filter((o) => o.id !== deletedId))
+              }
             }
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          console.log('[Dalanta Realtime Status]:', status)
+          if (status === 'SUBSCRIBED') {
+            setRealtimeStatus('connected')
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            setRealtimeStatus('disconnected')
+          } else {
+            setRealtimeStatus('connecting')
+          }
+        })
 
       return () => {
         supabase.removeChannel(channel)
@@ -184,11 +218,16 @@ export function OrderProvider({ children }) {
       // Fallback: Realtime via BroadcastChannel antar-tab browser lokal
       if (typeof window !== 'undefined' && window.BroadcastChannel) {
         broadcast = new BroadcastChannel('dalanta_realtime_orders')
+        setRealtimeStatus('connected')
         broadcast.onmessage = (event) => {
           const { type, order, orderId, newStatus } = event.data || {}
           if (type === 'NEW_ORDER' && order) {
             setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)])
+            setLatestIncomingOrderId(order.id)
             notifyNewOrder()
+            setTimeout(() => {
+              setLatestIncomingOrderId((curr) => (curr === order.id ? null : curr))
+            }, 4000)
           } else if (type === 'UPDATE_STATUS' && orderId && newStatus) {
             setOrders((prev) =>
               prev.map((o) =>
@@ -225,7 +264,7 @@ export function OrderProvider({ children }) {
    */
   const syncAllToSupabase = async () => {
     if (!isSupabaseConfigured || !supabase) {
-      alert('Koneksi Supabase belum aktif di browser. Silakan restart Vite dan refresh browser Anda.')
+      alert('Koneksi Supabase belum aktif di browser. Silakan refresh browser Anda.')
       return false
     }
 
@@ -283,10 +322,12 @@ export function OrderProvider({ children }) {
       updatedAt: new Date().toISOString(),
     }
 
+    // Update state lokal seketika
     setOrders((prev) => [newOrder, ...prev])
     broadcastAction({ type: 'NEW_ORDER', order: newOrder })
 
     if (isSupabaseConfigured && supabase) {
+      console.log('[Dalanta] Mengirim order baru ke Supabase:', newOrder.id)
       const { error } = await supabase.from('orders').insert([
         {
           id: newOrder.id,
@@ -306,6 +347,8 @@ export function OrderProvider({ children }) {
 
       if (error) {
         console.error('[Dalanta] Supabase Insert Error:', error.message)
+      } else {
+        console.log('[Dalanta] Sukses insert order ke Supabase:', newOrder.id)
       }
     }
 
@@ -417,7 +460,6 @@ export function OrderProvider({ children }) {
     } catch (e) {}
 
     if (isSupabaseConfigured && supabase) {
-      // Hapus seluruh baris di tabel orders
       await supabase.from('orders').delete().neq('id', 'NONE_EXISTS')
     }
   }
@@ -466,6 +508,8 @@ export function OrderProvider({ children }) {
     isSoundEnabled,
     toggleSound,
     isSupabaseConfigured,
+    realtimeStatus,
+    latestIncomingOrderId,
     createOrder,
     createManualOrder,
     updateOrderStatus,
