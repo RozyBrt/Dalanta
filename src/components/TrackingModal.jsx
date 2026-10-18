@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { 
   Search, 
   X, 
@@ -8,8 +8,9 @@ import {
   Truck, 
   Package, 
   ShoppingBag, 
-  MessageCircle,
-  AlertCircle
+  MessageCircle, 
+  AlertCircle,
+  Radio
 } from 'lucide-react'
 import { useOrders } from '../context/OrderContext'
 import { 
@@ -20,18 +21,21 @@ import {
 } from '../models/order'
 
 export default function TrackingModal({ onClose, initialOrderId = '' }) {
-  const { getOrderById, courierConfig } = useOrders()
+  const { getOrderById, courierConfig, orders, realtimeStatus } = useOrders()
   const [searchId, setSearchId] = useState(initialOrderId)
-  const [foundOrder, setFoundOrder] = useState(() => {
-    return initialOrderId ? getOrderById(initialOrderId) : null
-  })
+  const [activeTrackId, setActiveTrackId] = useState(initialOrderId)
   const [hasSearched, setHasSearched] = useState(Boolean(initialOrderId))
+
+  // Selalu mengambil order secara reaktif dari orders real-time context
+  const foundOrder = useMemo(() => {
+    if (!activeTrackId.trim()) return null
+    return getOrderById(activeTrackId.trim())
+  }, [activeTrackId, orders, getOrderById])
 
   const handleSearch = (e) => {
     e.preventDefault()
     if (!searchId.trim()) return
-    const order = getOrderById(searchId.trim())
-    setFoundOrder(order)
+    setActiveTrackId(searchId.trim())
     setHasSearched(true)
   }
 
@@ -65,9 +69,15 @@ export default function TrackingModal({ onClose, initialOrderId = '' }) {
           <X className="w-4 h-4" />
         </button>
 
-        <h3 className="text-xl font-black text-slate-900 mb-1">Lacak Status Pengantaran</h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-xl font-black text-slate-900">Lacak Status Pengantaran</h3>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mr-7">
+            <Radio className="w-2.5 h-2.5 text-emerald-600 animate-pulse" />
+            Live Sync
+          </span>
+        </div>
         <p className="text-xs text-slate-500 mb-4">
-          Masukkan ID pesanan Dalanta Anda untuk melihat posisi dan status kurir.
+          Status kurir diperbarui secara otomatis secara real-time tanpa perlu refresh.
         </p>
 
         {/* Search Input */}
@@ -78,7 +88,7 @@ export default function TrackingModal({ onClose, initialOrderId = '' }) {
               type="text"
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
-              placeholder="Contoh: DLT-1024"
+              placeholder="Contoh: DLT-4025"
               className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-mono uppercase tracking-wider outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
@@ -98,7 +108,7 @@ export default function TrackingModal({ onClose, initialOrderId = '' }) {
                 <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
                 <p className="text-sm font-bold text-slate-800">Pesanan Tidak Ditemukan</p>
                 <p className="text-xs text-slate-500 mt-1">
-                  Pastikan format ID benar (contoh: DLT-1024). Atau hubungi kurir langsung via WhatsApp.
+                  Pastikan format ID benar (contoh: DLT-4025). Atau tanyakan kurir langsung via WhatsApp.
                 </p>
               </div>
             ) : (
@@ -116,32 +126,39 @@ export default function TrackingModal({ onClose, initialOrderId = '' }) {
                       })}
                     </span>
                   </div>
-                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    {foundOrder.serviceType === SERVICE_TYPES.ERRAND ? (
-                      <>
-                        <ShoppingBag className="w-4 h-4 text-amber-600" />
-                        <span>Titip Beli</span>
-                        {foundOrder.bailoutAmount > 0 && (
-                          <span className="text-amber-800 font-normal">
-                            (Talangan Rp{foundOrder.bailoutAmount.toLocaleString('id-ID')})
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <Package className="w-4 h-4 text-emerald-600" />
-                        <span>Kirim Paket</span>
-                      </>
-                    )}
+                  <div className="text-xs font-bold text-slate-900 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      {foundOrder.serviceType === SERVICE_TYPES.ERRAND ? (
+                        <>
+                          <ShoppingBag className="w-4 h-4 text-amber-600" />
+                          <span>Titip Beli</span>
+                          {foundOrder.bailoutAmount > 0 && (
+                            <span className="text-amber-800 font-normal">
+                              (Talangan Rp{foundOrder.bailoutAmount.toLocaleString('id-ID')})
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Package className="w-4 h-4 text-emerald-600" />
+                          <span>Kirim Paket</span>
+                        </>
+                      )}
+                    </span>
+
+                    {/* Badge Status Terkini yang ikut berubah real-time */}
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${STATUS_METADATA[foundOrder.status]?.badgeBg}`}>
+                      {STATUS_METADATA[foundOrder.status]?.label}
+                    </span>
                   </div>
                 </div>
 
-                {/* Progress Stepper */}
+                {/* Progress Stepper yang bergerak live */}
                 <div className="py-2 px-1">
                   <div className="flex items-center justify-between relative mb-2">
                     <div className="absolute left-0 top-3.5 h-1 w-full bg-slate-200 -z-0"></div>
                     <div 
-                      className="absolute left-0 top-3.5 h-1 bg-emerald-600 transition-all duration-300 -z-0"
+                      className="absolute left-0 top-3.5 h-1 bg-emerald-600 transition-all duration-500 ease-out -z-0"
                       style={{ width: `${(currentStep / 3) * 100}%` }}
                     ></div>
 
@@ -152,9 +169,9 @@ export default function TrackingModal({ onClose, initialOrderId = '' }) {
                       return (
                         <div key={step.key} className="flex flex-col items-center relative z-10">
                           <div 
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                               isCurrent
-                                ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 scale-110'
+                                ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 scale-110 shadow-xs'
                                 : isPassed
                                 ? 'bg-emerald-600 text-white'
                                 : 'bg-slate-200 text-slate-500'
@@ -162,7 +179,7 @@ export default function TrackingModal({ onClose, initialOrderId = '' }) {
                           >
                             {isPassed ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                           </div>
-                          <span className={`text-[10px] mt-1.5 font-bold ${isCurrent ? 'text-emerald-800' : 'text-slate-500'}`}>
+                          <span className={`text-[10px] mt-1.5 font-bold transition-colors ${isCurrent ? 'text-emerald-800' : 'text-slate-500'}`}>
                             {step.label}
                           </span>
                         </div>
@@ -170,10 +187,15 @@ export default function TrackingModal({ onClose, initialOrderId = '' }) {
                     })}
                   </div>
 
-                  {/* Current Status Message */}
-                  <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
-                    <strong className="text-slate-800">Keterangan: </strong>
-                    <span className="text-slate-600">{STATUS_METADATA[foundOrder.status]?.description}</span>
+                  {/* Current Status Message Live */}
+                  <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs transition-all">
+                    <div className="font-bold text-slate-800 mb-0.5 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                      <span>Posisi Terkini: {STATUS_METADATA[foundOrder.status]?.shortLabel}</span>
+                    </div>
+                    <p className="text-slate-600 leading-relaxed">
+                      {STATUS_METADATA[foundOrder.status]?.description}
+                    </p>
                   </div>
                 </div>
 
@@ -200,7 +222,7 @@ export default function TrackingModal({ onClose, initialOrderId = '' }) {
                   href={buildWhatsAppUrl(courierConfig.phone, `Halo ${courierConfig.name}, saya ingin menanyakan pesanan saya dengan ID ${foundOrder.id}.`)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Tanya Posisi ke Kurir via WhatsApp</span>

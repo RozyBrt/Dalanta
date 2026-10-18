@@ -1,33 +1,41 @@
-﻿import { CheckCircle2, MessageSquare, ArrowRight, X, MapPin, Package, ShoppingBag, Copy, Check } from 'lucide-react'
-import { useState } from 'react'
+﻿import { CheckCircle2, MessageSquare, ArrowRight, X, MapPin, Package, ShoppingBag, Copy, Check, Radio } from 'lucide-react'
+import { useState, useMemo } from 'react'
 import { useOrders } from '../context/OrderContext'
-import { buildWhatsAppUrl, SERVICE_TYPES } from '../models/order'
+import { buildWhatsAppUrl, SERVICE_TYPES, STATUS_METADATA } from '../models/order'
 
 export default function OrderSuccessModal({ order, onClose, onGoToDashboard }) {
-  const { courierConfig } = useOrders()
+  const { courierConfig, orders, getOrderById } = useOrders()
   const [copied, setCopied] = useState(false)
 
-  if (!order) return null
+  // Selalu sinkronkan dengan status pesanan terbaru secara real-time
+  const liveOrder = useMemo(() => {
+    if (!order) return null
+    return getOrderById(order.id) || order
+  }, [order, orders, getOrderById])
+
+  if (!liveOrder) return null
 
   // Format pesan WhatsApp konfirmasi dari pelanggan ke kurir
   const orderSummaryText = 
 `Halo ${courierConfig.name}, saya baru saja membuat pesanan di Dalanta:
 
-*ID Pesanan*: ${order.id}
-*Nama*: ${order.customerName}
-*Layanan*: ${order.serviceType === SERVICE_TYPES.ERRAND ? 'Titip Beli (Errand)' : 'Kirim Paket'}
-*Titik Jemput*: ${order.pickupAddress}
-*Titik Antar*: ${order.dropoffAddress}
-${order.bailoutAmount > 0 ? `*Talangan Belanja*: Rp${order.bailoutAmount.toLocaleString('id-ID')}\n` : ''}${order.notes ? `*Catatan*: ${order.notes}\n` : ''}
+*ID Pesanan*: ${liveOrder.id}
+*Nama*: ${liveOrder.customerName}
+*Layanan*: ${liveOrder.serviceType === SERVICE_TYPES.ERRAND ? 'Titip Beli (Errand)' : 'Kirim Paket'}
+*Titik Jemput*: ${liveOrder.pickupAddress}
+*Titik Antar*: ${liveOrder.dropoffAddress}
+${liveOrder.bailoutAmount > 0 ? `*Talangan Belanja*: Rp${liveOrder.bailoutAmount.toLocaleString('id-ID')}\n` : ''}${liveOrder.notes ? `*Catatan*: ${liveOrder.notes}\n` : ''}
 Mohon segera dikonfirmasi ya kak. Terima kasih!`
 
   const whatsappUrl = buildWhatsAppUrl(courierConfig.phone, orderSummaryText)
 
   const copyId = () => {
-    navigator.clipboard.writeText(order.id)
+    navigator.clipboard.writeText(liveOrder.id)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const statusMeta = STATUS_METADATA[liveOrder.status]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -55,11 +63,11 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
           </p>
 
           <div className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
-            <span className="font-mono font-bold text-sm text-slate-900">{order.id}</span>
+            <span className="font-mono font-bold text-sm text-slate-900">{liveOrder.id}</span>
             <button
               type="button"
               onClick={copyId}
-              className="text-slate-500 hover:text-slate-800 transition-colors"
+              className="text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
               title="Salin ID"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -67,15 +75,24 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
           </div>
         </div>
 
+        {/* Live Status Pill */}
+        <div className="mb-4 p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+          <span className="text-[11px] font-medium text-slate-500">Status Terkini:</span>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold border ${statusMeta?.badgeBg}`}>
+            <span className={`w-2 h-2 rounded-full ${statusMeta?.dotColor} animate-ping`}></span>
+            <span>{statusMeta?.label}</span>
+          </span>
+        </div>
+
         {/* Order Details Brief */}
         <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-5 space-y-2.5 text-xs text-slate-700">
           <div className="flex items-start gap-2">
             <span className="font-semibold text-slate-500 w-20 shrink-0">Layanan:</span>
             <span className="font-bold text-slate-900 flex items-center gap-1">
-              {order.serviceType === SERVICE_TYPES.ERRAND ? (
+              {liveOrder.serviceType === SERVICE_TYPES.ERRAND ? (
                 <>
                   <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
-                  Titip Beli (Talangan Rp{order.bailoutAmount.toLocaleString('id-ID')})
+                  Titip Beli (Talangan Rp{liveOrder.bailoutAmount.toLocaleString('id-ID')})
                 </>
               ) : (
                 <>
@@ -90,7 +107,7 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
             <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-slate-500">Jemput: </span>
-              <span>{order.pickupAddress}</span>
+              <span>{liveOrder.pickupAddress}</span>
             </div>
           </div>
 
@@ -98,20 +115,19 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
             <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold text-slate-500">Tujuan: </span>
-              <span>{order.dropoffAddress}</span>
+              <span>{liveOrder.dropoffAddress}</span>
             </div>
           </div>
 
-          {order.notes && (
+          {liveOrder.notes && (
             <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-500 italic">
-              "{order.notes}"
+              "{liveOrder.notes}"
             </div>
           )}
         </div>
 
         {/* Action Buttons */}
         <div className="space-y-2.5">
-          {/* Primary Action: Send to Courier WhatsApp */}
           <a
             href={whatsappUrl}
             target="_blank"
@@ -122,7 +138,6 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
             <span>Kirim Notif WhatsApp ke Kurir</span>
           </a>
 
-          {/* Secondary Action: View in Dashboard (Convenience for testing/courier) */}
           {onGoToDashboard && (
             <button
               type="button"
