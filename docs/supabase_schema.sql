@@ -42,6 +42,11 @@ CREATE POLICY "Public Update Orders"
 ON public.orders FOR UPDATE 
 USING (true);
 
+-- Mengizinkan penghapusan pesanan (misal: batalkan pesanan atau bersihkan data)
+CREATE POLICY "Public Delete Orders" 
+ON public.orders FOR DELETE 
+USING (true);
+
 -- 5. Aktifkan Supabase Realtime untuk tabel orders
 -- Agar pesanan baru yang di-submit langsung muncul via WebSocket di HP kurir
 ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;

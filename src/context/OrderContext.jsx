@@ -14,6 +14,8 @@ const STORAGE_KEY = 'dalanta_orders_v1'
 const COURIER_SETTINGS_KEY = 'dalanta_courier_settings_v1'
 const SOUND_PREF_KEY = 'dalanta_sound_pref_v1'
 
+const DUMMY_IDS = new Set(['DLT-1021', 'DLT-1022', 'DLT-1023', 'DLT-1024', 'DLT-TEST-CONN'])
+
 const DEFAULT_COURIER = {
   name: 'Kurir Dalanta',
   phone: '081234567890',
@@ -27,11 +29,15 @@ export function OrderProvider({ children }) {
   const [orders, setOrders] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) return JSON.parse(saved)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // Bersihkan data dummy lama jika ada di localStorage
+        return parsed.filter((o) => !DUMMY_IDS.has(o.id))
+      }
     } catch (e) {
       console.warn('Gagal memuat pesanan:', e)
     }
-    return INITIAL_ORDERS
+    return []
   })
 
   const [courierConfig, setCourierConfig] = useState(() => {
@@ -55,10 +61,11 @@ export function OrderProvider({ children }) {
 
   const [isSyncing, setIsSyncing] = useState(false)
 
-  // Local storage persistence
+  // Local storage persistence (tanpa data dummy)
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(orders))
+      const cleanOrders = orders.filter((o) => !DUMMY_IDS.has(o.id))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanOrders))
     } catch (e) {
       console.error(e)
     }
@@ -94,8 +101,6 @@ export function OrderProvider({ children }) {
     let broadcast = null
 
     if (isSupabaseConfigured && supabase) {
-      console.log('[Dalanta] Memulai sinkronisasi Supabase Cloud...')
-
       // 1. Ambil data dari Supabase
       supabase
         .from('orders')
@@ -104,28 +109,24 @@ export function OrderProvider({ children }) {
         .then(({ data, error }) => {
           if (error) {
             console.error('[Dalanta] Gagal query Supabase:', error.message)
-          } else if (data && data.length > 0) {
-            console.log('[Dalanta] Memuat', data.length, 'pesanan dari Supabase')
-            const mapped = data.map((d) => ({
-              id: d.id,
-              customerName: d.customer_name,
-              customerPhone: d.customer_phone,
-              pickupAddress: d.pickup_address,
-              dropoffAddress: d.dropoff_address,
-              serviceType: d.service_type,
-              bailoutAmount: Number(d.bailout_amount) || 0,
-              notes: d.notes || '',
-              status: d.status,
-              source: d.source,
-              createdAt: d.created_at,
-              updatedAt: d.updated_at,
-            }))
-            // Gabungkan pesanan lokal dan server tanpa duplikat
-            setOrders((prev) => {
-              const ids = new Set(mapped.map((m) => m.id))
-              const remainingLocal = prev.filter((p) => !ids.has(p.id))
-              return [...mapped, ...remainingLocal]
-            })
+          } else if (data) {
+            const mapped = data
+              .filter((d) => !DUMMY_IDS.has(d.id))
+              .map((d) => ({
+                id: d.id,
+                customerName: d.customer_name,
+                customerPhone: d.customer_phone,
+                pickupAddress: d.pickup_address,
+                dropoffAddress: d.dropoff_address,
+                serviceType: d.service_type,
+                bailoutAmount: Number(d.bailout_amount) || 0,
+                notes: d.notes || '',
+                status: d.status,
+                source: d.source,
+                createdAt: d.created_at,
+                updatedAt: d.updated_at,
+              }))
+            setOrders(mapped)
           }
         })
 
@@ -136,9 +137,10 @@ export function OrderProvider({ children }) {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders' },
           (payload) => {
-            console.log('[Dalanta] Event Realtime diterima:', payload.eventType)
             if (payload.eventType === 'INSERT') {
               const newRow = payload.new
+              if (DUMMY_IDS.has(newRow.id)) return
+
               const newOrder = {
                 id: newRow.id,
                 customerName: newRow.customer_name,
@@ -252,7 +254,6 @@ export function OrderProvider({ children }) {
         return false
       }
 
-      console.log('[Dalanta] Seluruh data berhasil disinkronkan ke Supabase!')
       alert('Berhasil! Seluruh data pesanan telah tersimpan di Supabase.')
       setIsSyncing(false)
       return true
@@ -286,7 +287,6 @@ export function OrderProvider({ children }) {
     broadcastAction({ type: 'NEW_ORDER', order: newOrder })
 
     if (isSupabaseConfigured && supabase) {
-      console.log('[Dalanta] Mengirim order baru ke Supabase:', newOrder.id)
       const { error } = await supabase.from('orders').insert([
         {
           id: newOrder.id,
@@ -306,11 +306,7 @@ export function OrderProvider({ children }) {
 
       if (error) {
         console.error('[Dalanta] Supabase Insert Error:', error.message)
-      } else {
-        console.log('[Dalanta] Berhasil tersimpan di Supabase Cloud:', newOrder.id)
       }
-    } else {
-      console.warn('[Dalanta] Order disimpan di lokal (Supabase belum terbaca di browser ini).')
     }
 
     return newOrder
@@ -339,7 +335,6 @@ export function OrderProvider({ children }) {
     broadcastAction({ type: 'NEW_ORDER', order: newOrder })
 
     if (isSupabaseConfigured && supabase) {
-      console.log('[Dalanta] Mengirim order manual WA ke Supabase:', newOrder.id)
       const { error } = await supabase.from('orders').insert([
         {
           id: newOrder.id,
@@ -412,19 +407,25 @@ export function OrderProvider({ children }) {
     }
   }
 
+  /**
+   * Membersihkan seluruh data pesanan (Reset ke kondisi kosong)
+   */
+  const clearAllOrders = async () => {
+    setOrders([])
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch (e) {}
+
+    if (isSupabaseConfigured && supabase) {
+      // Hapus seluruh baris di tabel orders
+      await supabase.from('orders').delete().neq('id', 'NONE_EXISTS')
+    }
+  }
+
   const getOrderById = (orderId) => {
     if (!orderId) return null
     const clean = orderId.trim().toUpperCase()
     return orders.find((order) => order.id.toUpperCase() === clean) || null
-  }
-
-  const resetToMockData = () => {
-    setOrders(INITIAL_ORDERS)
-    setCourierConfig(DEFAULT_COURIER)
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-      localStorage.removeItem(COURIER_SETTINGS_KEY)
-    } catch (e) {}
   }
 
   const updateCourierConfig = (newSettings) => {
@@ -470,8 +471,8 @@ export function OrderProvider({ children }) {
     updateOrderStatus,
     advanceOrderStatus,
     deleteOrder,
+    clearAllOrders,
     getOrderById,
-    resetToMockData,
     notifyNewOrder,
     syncAllToSupabase,
     isSyncing,

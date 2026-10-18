@@ -36,7 +36,7 @@ export default function CourierDashboard() {
     advanceOrderStatus, 
     updateOrderStatus, 
     createManualOrder, 
-    resetToMockData,
+    clearAllOrders,
     isSoundEnabled,
     toggleSound,
     isSupabaseConfigured,
@@ -163,8 +163,8 @@ export default function CourierDashboard() {
 
           <button
             type="button"
-            onClick={resetToMockData}
-            title="Reset ke data awal pengujian"
+            onClick={() => { if (window.confirm('Hapus seluruh daftar pesanan agar bersih?')) clearAllOrders() }}
+            title="Bersihkan seluruh data pesanan"
             className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
@@ -583,3 +583,4 @@ export default function CourierDashboard() {
     </section>
   )
 }
+
