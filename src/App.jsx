@@ -83,6 +83,7 @@ export default function App() {
         <OrderSuccessModal
           order={submittedOrder}
           onClose={() => setSubmittedOrder(null)}
+          onTrackOrder={(orderId) => { setSubmittedOrder(null); handleOpenTracking(orderId); }}
           onGoToDashboard={() => {
             setSubmittedOrder(null)
             setCurrentView('courier')
@@ -100,3 +101,4 @@ export default function App() {
     </div>
   )
 }
+

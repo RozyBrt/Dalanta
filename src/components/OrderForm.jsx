@@ -51,15 +51,14 @@ export default function OrderForm({ onSuccess }) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!validate()) return
 
     setIsSubmitting(true)
     
-    // Simulasi delay singkat agar feedback terasa natural
-    setTimeout(() => {
-      const order = createOrder({
+    try {
+      const order = await createOrder({
         customerName,
         customerPhone,
         pickupAddress,
@@ -70,7 +69,7 @@ export default function OrderForm({ onSuccess }) {
       })
 
       setIsSubmitting(false)
-      // Reset form
+      // Reset form input
       setCustomerName('')
       setCustomerPhone('')
       setPickupAddress('')
@@ -79,10 +78,13 @@ export default function OrderForm({ onSuccess }) {
       setNotes('')
       setErrors({})
 
-      if (onSuccess) {
+      if (onSuccess && order) {
         onSuccess(order)
       }
-    }, 400)
+    } catch (err) {
+      console.error('Gagal memproses pesanan:', err)
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -314,3 +316,4 @@ export default function OrderForm({ onSuccess }) {
     </section>
   )
 }
+

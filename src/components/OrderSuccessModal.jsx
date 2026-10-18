@@ -1,19 +1,19 @@
-﻿import { CheckCircle2, MessageSquare, ArrowRight, X, MapPin, Package, ShoppingBag, Copy, Check, Radio } from 'lucide-react'
+﻿import { CheckCircle2, MessageSquare, ArrowRight, X, MapPin, Package, ShoppingBag, Copy, Check, Search } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useOrders } from '../context/OrderContext'
 import { buildWhatsAppUrl, SERVICE_TYPES, STATUS_METADATA } from '../models/order'
 
-export default function OrderSuccessModal({ order, onClose, onGoToDashboard }) {
+export default function OrderSuccessModal({ order, onClose, onGoToDashboard, onTrackOrder }) {
   const { courierConfig, orders, getOrderById } = useOrders()
   const [copied, setCopied] = useState(false)
 
   // Selalu sinkronkan dengan status pesanan terbaru secara real-time
   const liveOrder = useMemo(() => {
-    if (!order) return null
+    if (!order || !order.id) return order || null
     return getOrderById(order.id) || order
   }, [order, orders, getOrderById])
 
-  if (!liveOrder) return null
+  if (!liveOrder || !liveOrder.id) return null
 
   // Format pesan WhatsApp konfirmasi dari pelanggan ke kurir
   const orderSummaryText = 
@@ -30,9 +30,11 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
   const whatsappUrl = buildWhatsAppUrl(courierConfig.phone, orderSummaryText)
 
   const copyId = () => {
-    navigator.clipboard.writeText(liveOrder.id)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (liveOrder.id) {
+      navigator.clipboard.writeText(liveOrder.id)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   const statusMeta = STATUS_METADATA[liveOrder.status]
@@ -44,7 +46,7 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors"
+          className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
@@ -62,15 +64,25 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
             Pesanan Anda langsung tercatat di dashboard kurir dengan ID:
           </p>
 
-          <div className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
+          <div className="inline-flex items-center gap-2 mt-2 px-3.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200">
             <span className="font-mono font-bold text-sm text-slate-900">{liveOrder.id}</span>
             <button
               type="button"
               onClick={copyId}
-              className="text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-              title="Salin ID"
+              className="text-slate-500 hover:text-slate-800 transition-colors cursor-pointer flex items-center gap-1 text-xs"
+              title="Salin ID Pesanan"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-emerald-700 font-semibold">Tersalin</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Salin</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -127,22 +139,36 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-2.5">
+        <div className="space-y-2">
+          {/* Lacak Posisi Langsung Button */}
+          {onTrackOrder && (
+            <button
+              type="button"
+              onClick={() => onTrackOrder(liveOrder.id)}
+              className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer min-h-[44px]"
+            >
+              <Search className="w-4 h-4 text-emerald-400" />
+              <span>Lacak Posisi Pesanan Ini</span>
+            </button>
+          )}
+
+          {/* Primary Action: Send to Courier WhatsApp */}
           <a
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[44px]"
+            className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[44px]"
           >
             <MessageSquare className="w-4 h-4" />
             <span>Kirim Notif WhatsApp ke Kurir</span>
           </a>
 
+          {/* Secondary Action: View in Dashboard */}
           {onGoToDashboard && (
             <button
               type="button"
               onClick={onGoToDashboard}
-              className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-h-[40px]"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-h-[38px]"
             >
               <span>Buka Tampilan Dashboard Kurir</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -152,7 +178,7 @@ Mohon segera dikonfirmasi ya kak. Terima kasih!`
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2 text-slate-500 hover:text-slate-800 text-xs font-medium cursor-pointer"
+            className="w-full py-1.5 text-slate-500 hover:text-slate-800 text-xs font-medium cursor-pointer"
           >
             Tutup & Buat Pesanan Lain
           </button>
