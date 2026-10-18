@@ -5,11 +5,14 @@ import OrderForm from './components/OrderForm'
 import OrderSuccessModal from './components/OrderSuccessModal'
 import FloatingWhatsAppCTA from './components/FloatingWhatsAppCTA'
 import CourierDashboard from './components/CourierDashboard'
-import { Bike, ShieldCheck, Heart } from 'lucide-react'
+import TrackingModal from './components/TrackingModal'
+import { Bike } from 'lucide-react'
 
 export default function App() {
   const [currentView, setCurrentView] = useState('customer') // 'customer' | 'courier'
   const [submittedOrder, setSubmittedOrder] = useState(null)
+  const [showTrackingModal, setShowTrackingModal] = useState(false)
+  const [trackingOrderId, setTrackingOrderId] = useState('')
 
   const handleScrollToForm = () => {
     const el = document.getElementById('form-order')
@@ -18,10 +21,19 @@ export default function App() {
     }
   }
 
+  const handleOpenTracking = (orderId = '') => {
+    setTrackingOrderId(orderId)
+    setShowTrackingModal(true)
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
       {/* Universal Sticky Header */}
-      <Header currentView={currentView} setCurrentView={setCurrentView} />
+      <Header 
+        currentView={currentView} 
+        setCurrentView={setCurrentView} 
+        onOpenTracking={() => handleOpenTracking()}
+      />
 
       {/* Main Content Area */}
       <main className="flex-1 pb-16">
@@ -50,12 +62,18 @@ export default function App() {
           <div className="flex items-center gap-4 text-slate-500">
             <button
               type="button"
+              onClick={() => handleOpenTracking()}
+              className="hover:text-emerald-700 font-semibold transition-colors underline underline-offset-4"
+            >
+              Lacak Pesanan
+            </button>
+            <button
+              type="button"
               onClick={() => setCurrentView(currentView === 'customer' ? 'courier' : 'customer')}
               className="hover:text-emerald-700 font-semibold transition-colors underline underline-offset-4"
             >
               {currentView === 'customer' ? 'Buka Dashboard Kurir' : 'Kembali ke Form Pelanggan'}
             </button>
-            <span>COD & Talangan Belanja</span>
           </div>
         </div>
       </footer>
@@ -69,6 +87,14 @@ export default function App() {
             setSubmittedOrder(null)
             setCurrentView('courier')
           }}
+        />
+      )}
+
+      {/* Customer Tracking Modal */}
+      {showTrackingModal && (
+        <TrackingModal
+          initialOrderId={trackingOrderId}
+          onClose={() => setShowTrackingModal(false)}
         />
       )}
     </div>

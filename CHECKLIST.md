@@ -114,11 +114,11 @@ otes: Catatan khusus untuk kurir
 
 ---
 
-### Milestone 4: Integrasi Database Real-time (Supabase / Firebase)
-- [ ] Setup proyek Supabase gratis atau Firebase Realtime DB
-- [ ] Buat tabel/koleksi orders dengan RLS (Row Level Security) yang sesuai
-- [ ] Implementasi listener WebSocket / Supabase Realtime di Dashboard Kurir
-- [ ] Notifikasi suara / visual saat ada pesanan baru masuk dari formulir
+### Milestone 4: Integrasi Database Real-time & Notifikasi (Supabase / Multi-tab) [SELESAI]
+- [x] Setup skema SQL database Supabase (docs/supabase_schema.sql) & .env.example
+- [x] Definisi tabel orders lengkap dengan RLS policy & realtime publication
+- [x] Implementasi listener Supabase Realtime + fallback BroadcastChannel antar-tab
+- [x] Audio Chime synthesizer pesanan masuk (src/lib/audioNotifier.js) + modal pengaturan kurir & modal lacak pesanan
 
 ---
 

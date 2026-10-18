@@ -14,7 +14,10 @@ import {
   ArrowRight,
   X,
   MessageCircle,
-  Truck
+  Settings,
+  Volume2,
+  VolumeX,
+  Radio
 } from 'lucide-react'
 import { useOrders } from '../context/OrderContext'
 import { 
@@ -24,6 +27,7 @@ import {
   buildGoogleMapsUrl, 
   buildWhatsAppUrl 
 } from '../models/order'
+import CourierSettingsModal from './CourierSettingsModal'
 
 export default function CourierDashboard() {
   const { 
@@ -32,11 +36,16 @@ export default function CourierDashboard() {
     advanceOrderStatus, 
     updateOrderStatus, 
     createManualOrder, 
-    resetToMockData 
+    resetToMockData,
+    isSoundEnabled,
+    toggleSound,
+    connectionMode,
+    isSupabaseConfigured
   } = useOrders()
 
   const [filter, setFilter] = useState('all') // 'all', 'pending', 'active', 'completed'
   const [showManualModal, setShowManualModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
 
   // Form state manual order
   const [manualName, setManualName] = useState('')
@@ -88,8 +97,9 @@ export default function CourierDashboard() {
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Dashboard Kurir Lapangan
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800">
-              Driver View
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              <Radio className="w-2.5 h-2.5 text-emerald-600 animate-pulse" />
+              {isSupabaseConfigured ? 'Cloud Realtime' : 'Multi-Tab Sync'}
             </span>
           </div>
           <p className="text-xs text-slate-500">
@@ -98,6 +108,31 @@ export default function CourierDashboard() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Sound Toggle */}
+          <button
+            type="button"
+            onClick={toggleSound}
+            title={isSoundEnabled ? 'Suara notifikasi aktif' : 'Suara notifikasi mati'}
+            className={`p-2 rounded-xl border transition-colors ${
+              isSoundEnabled 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                : 'bg-white border-slate-200 text-slate-400'
+            }`}
+          >
+            {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
+
+          {/* Settings Modal Button */}
+          <button
+            type="button"
+            onClick={() => setShowSettingsModal(true)}
+            title="Buka Pengaturan Kurir & Nomor WA"
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 transition-colors cursor-pointer"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+
+          {/* Add Order WA */}
           <button
             type="button"
             onClick={() => setShowManualModal(true)}
@@ -373,6 +408,11 @@ export default function CourierDashboard() {
           })
         )}
       </div>
+
+      {/* Modal Settings */}
+      {showSettingsModal && (
+        <CourierSettingsModal onClose={() => setShowSettingsModal(false)} />
+      )}
 
       {/* Modal Tambah Order Manual WA */}
       {showManualModal && (

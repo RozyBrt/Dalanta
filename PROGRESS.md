@@ -90,13 +90,20 @@
   - [x] Modal/Form tambah order manual dari WA
 
 - [ ] **Fase 5: Polishing, Testing & Integrasi Realtime**
-  - [ ] Pengujian responsivitas mobile di berbagai ukuran layar
+  - [x] Pengujian responsivitas mobile di berbagai ukuran layar
   - [ ] Penyesuaian tema dan micro-interactions
   - [ ] Panduan deployment ke Vercel / Netlify
 
 ---
 
 ## 5. Log Perubahan (Changelog)
+
+### [2026-10-18 - Milestone 4: Integrasi Real-Time & Audio Chime Selesai]
+- Menyediakan skema database Supabase lengkap dengan RLS & Realtime di docs/supabase_schema.sql.
+- Membangun audio chime synthesizer menggunakan Web Audio API murni (src/lib/audioNotifier.js).
+- Mengintegrasikan dual real-time engine: Supabase WebSocket Cloud + BroadcastChannel antar-tab lokal.
+- Menambahkan modal Pengaturan Kurir (nomor WA, nama, status operasional, tes suara) di src/components/CourierSettingsModal.jsx.
+- Menambahkan modal Lacak Status Pengantaran Pelanggan di src/components/TrackingModal.jsx.
 
 ### [2026-10-18 - Milestone 2 & 3: UI Pelanggan & Dashboard Kurir Selesai]
 - Menyelesaikan seluruh komponen Modul A (Header, HeroDualAction, OrderForm, OrderSuccessModal, FloatingWhatsAppCTA).
