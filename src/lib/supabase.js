@@ -13,6 +13,14 @@ export const isSupabaseConfigured = Boolean(
   !cleanUrl.includes('xyzcompany')
 )
 
+if (typeof window !== 'undefined') {
+  if (isSupabaseConfigured) {
+    console.log('%c[Dalanta] Supabase Terhubung: ' + cleanUrl, 'color: #059669; font-weight: bold;')
+  } else {
+    console.warn('[Dalanta] Supabase belum terbaca di browser. Jika baru membuat .env, silakan refresh browser (F5) atau restart server Vite.')
+  }
+}
+
 export const supabase = isSupabaseConfigured
   ? createClient(cleanUrl, supabaseAnonKey)
   : null

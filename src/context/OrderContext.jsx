@@ -53,9 +53,7 @@ export function OrderProvider({ children }) {
     }
   })
 
-  const [connectionMode, setConnectionMode] = useState(
-    isSupabaseConfigured ? 'supabase' : 'local_realtime'
-  )
+  const [isSyncing, setIsSyncing] = useState(false)
 
   // Local storage persistence
   useEffect(() => {
@@ -96,13 +94,18 @@ export function OrderProvider({ children }) {
     let broadcast = null
 
     if (isSupabaseConfigured && supabase) {
-      // 1. Ambil data awal dari Supabase
+      console.log('[Dalanta] Memulai sinkronisasi Supabase Cloud...')
+
+      // 1. Ambil data dari Supabase
       supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
-          if (!error && data && data.length > 0) {
+          if (error) {
+            console.error('[Dalanta] Gagal query Supabase:', error.message)
+          } else if (data && data.length > 0) {
+            console.log('[Dalanta] Memuat', data.length, 'pesanan dari Supabase')
             const mapped = data.map((d) => ({
               id: d.id,
               customerName: d.customer_name,
@@ -117,7 +120,12 @@ export function OrderProvider({ children }) {
               createdAt: d.created_at,
               updatedAt: d.updated_at,
             }))
-            setOrders(mapped)
+            // Gabungkan pesanan lokal dan server tanpa duplikat
+            setOrders((prev) => {
+              const ids = new Set(mapped.map((m) => m.id))
+              const remainingLocal = prev.filter((p) => !ids.has(p.id))
+              return [...mapped, ...remainingLocal]
+            })
           }
         })
 
@@ -128,6 +136,7 @@ export function OrderProvider({ children }) {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders' },
           (payload) => {
+            console.log('[Dalanta] Event Realtime diterima:', payload.eventType)
             if (payload.eventType === 'INSERT') {
               const newRow = payload.new
               const newOrder = {
@@ -205,9 +214,52 @@ export function OrderProvider({ children }) {
         const bc = new BroadcastChannel('dalanta_realtime_orders')
         bc.postMessage(payload)
         bc.close()
-      } catch (e) {
-        // Abaikan jika tidak didukung
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * Fungsi manual untuk menyinkronkan seluruh order lokal ke Supabase
+   */
+  const syncAllToSupabase = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      alert('Koneksi Supabase belum aktif di browser. Silakan restart Vite dan refresh browser Anda.')
+      return false
+    }
+
+    setIsSyncing(true)
+    try {
+      const rows = orders.map((o) => ({
+        id: o.id,
+        customer_name: o.customerName,
+        customer_phone: o.customerPhone,
+        pickup_address: o.pickupAddress,
+        dropoff_address: o.dropoffAddress,
+        service_type: o.serviceType,
+        bailout_amount: o.bailoutAmount,
+        notes: o.notes,
+        status: o.status,
+        source: o.source,
+        created_at: o.createdAt,
+        updated_at: o.updatedAt,
+      }))
+
+      const { error } = await supabase.from('orders').upsert(rows)
+      if (error) {
+        console.error('Gagal upsert ke Supabase:', error)
+        alert('Gagal sinkronisasi: ' + error.message)
+        setIsSyncing(false)
+        return false
       }
+
+      console.log('[Dalanta] Seluruh data berhasil disinkronkan ke Supabase!')
+      alert('Berhasil! Seluruh data pesanan telah tersimpan di Supabase.')
+      setIsSyncing(false)
+      return true
+    } catch (e) {
+      console.error(e)
+      setIsSyncing(false)
+      return false
     }
   }
 
@@ -234,7 +286,8 @@ export function OrderProvider({ children }) {
     broadcastAction({ type: 'NEW_ORDER', order: newOrder })
 
     if (isSupabaseConfigured && supabase) {
-      await supabase.from('orders').insert([
+      console.log('[Dalanta] Mengirim order baru ke Supabase:', newOrder.id)
+      const { error } = await supabase.from('orders').insert([
         {
           id: newOrder.id,
           customer_name: newOrder.customerName,
@@ -250,6 +303,14 @@ export function OrderProvider({ children }) {
           updated_at: newOrder.updatedAt,
         },
       ])
+
+      if (error) {
+        console.error('[Dalanta] Supabase Insert Error:', error.message)
+      } else {
+        console.log('[Dalanta] Berhasil tersimpan di Supabase Cloud:', newOrder.id)
+      }
+    } else {
+      console.warn('[Dalanta] Order disimpan di lokal (Supabase belum terbaca di browser ini).')
     }
 
     return newOrder
@@ -278,7 +339,8 @@ export function OrderProvider({ children }) {
     broadcastAction({ type: 'NEW_ORDER', order: newOrder })
 
     if (isSupabaseConfigured && supabase) {
-      await supabase.from('orders').insert([
+      console.log('[Dalanta] Mengirim order manual WA ke Supabase:', newOrder.id)
+      const { error } = await supabase.from('orders').insert([
         {
           id: newOrder.id,
           customer_name: newOrder.customerName,
@@ -294,6 +356,9 @@ export function OrderProvider({ children }) {
           updated_at: newOrder.updatedAt,
         },
       ])
+      if (error) {
+        console.error('[Dalanta] Supabase Insert Error:', error.message)
+      }
     }
 
     return newOrder
@@ -315,10 +380,13 @@ export function OrderProvider({ children }) {
     broadcastAction({ type: 'UPDATE_STATUS', orderId, newStatus })
 
     if (isSupabaseConfigured && supabase) {
-      await supabase
+      const { error } = await supabase
         .from('orders')
         .update({ status: newStatus, updated_at: now })
         .eq('id', orderId)
+      if (error) {
+        console.error('[Dalanta] Supabase Update Error:', error.message)
+      }
     }
   }
 
@@ -396,7 +464,6 @@ export function OrderProvider({ children }) {
     updateCourierConfig,
     isSoundEnabled,
     toggleSound,
-    connectionMode,
     isSupabaseConfigured,
     createOrder,
     createManualOrder,
@@ -406,6 +473,8 @@ export function OrderProvider({ children }) {
     getOrderById,
     resetToMockData,
     notifyNewOrder,
+    syncAllToSupabase,
+    isSyncing,
     stats,
   }
 

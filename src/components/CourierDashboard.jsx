@@ -5,19 +5,19 @@ import {
   MapPin, 
   Phone, 
   Navigation, 
-  Clock, 
   CheckCircle2, 
   Plus, 
   RotateCcw, 
   Coins, 
-  Filter, 
   ArrowRight,
   X,
   MessageCircle,
   Settings,
   Volume2,
   VolumeX,
-  Radio
+  Radio,
+  CloudUpload,
+  AlertTriangle
 } from 'lucide-react'
 import { useOrders } from '../context/OrderContext'
 import { 
@@ -39,8 +39,9 @@ export default function CourierDashboard() {
     resetToMockData,
     isSoundEnabled,
     toggleSound,
-    connectionMode,
-    isSupabaseConfigured
+    isSupabaseConfigured,
+    syncAllToSupabase,
+    isSyncing
   } = useOrders()
 
   const [filter, setFilter] = useState('all') // 'all', 'pending', 'active', 'completed'
@@ -97,9 +98,13 @@ export default function CourierDashboard() {
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Dashboard Kurir Lapangan
             </h1>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-              <Radio className="w-2.5 h-2.5 text-emerald-600 animate-pulse" />
-              {isSupabaseConfigured ? 'Cloud Realtime' : 'Multi-Tab Sync'}
+            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+              isSupabaseConfigured 
+                ? 'bg-emerald-100 text-emerald-800' 
+                : 'bg-amber-100 text-amber-800'
+            }`}>
+              <Radio className="w-2.5 h-2.5 animate-pulse" />
+              {isSupabaseConfigured ? 'Cloud Realtime Aktif' : 'Mode Lokal (Refresh F5)'}
             </span>
           </div>
           <p className="text-xs text-slate-500">
@@ -107,7 +112,21 @@ export default function CourierDashboard() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Sinkronkan Data ke Supabase Button */}
+          {isSupabaseConfigured && (
+            <button
+              type="button"
+              disabled={isSyncing}
+              onClick={syncAllToSupabase}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer min-h-[40px] disabled:opacity-50"
+              title="Upload semua data lokal ke database Supabase"
+            >
+              <CloudUpload className="w-4 h-4 text-emerald-400" />
+              <span>{isSyncing ? 'Sinkronisasi...' : 'Sinkronkan ke Cloud'}</span>
+            </button>
+          )}
+
           {/* Sound Toggle */}
           <button
             type="button"
@@ -152,6 +171,17 @@ export default function CourierDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Warning if Supabase is not detected in browser */}
+      {!isSupabaseConfigured && (
+        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/90 flex items-start gap-2.5 text-xs text-amber-900">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold">Kredensial .env belum terbaca di browser ini: </span>
+            <span>Vite membaca file <code>.env</code> saat server pertama kali start. Harap tekan <strong>Ctrl + Shift + R</strong> atau refresh browser Anda agar koneksi Supabase Cloud aktif.</span>
+          </div>
+        </div>
+      )}
 
       {/* Summary Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
