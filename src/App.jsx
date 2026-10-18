@@ -1,122 +1,76 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+﻿import { useState } from 'react'
+import Header from './components/Header'
+import HeroDualAction from './components/HeroDualAction'
+import OrderForm from './components/OrderForm'
+import OrderSuccessModal from './components/OrderSuccessModal'
+import FloatingWhatsAppCTA from './components/FloatingWhatsAppCTA'
+import CourierDashboard from './components/CourierDashboard'
+import { Bike, ShieldCheck, Heart } from 'lucide-react'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [currentView, setCurrentView] = useState('customer') // 'customer' | 'courier'
+  const [submittedOrder, setSubmittedOrder] = useState(null)
+
+  const handleScrollToForm = () => {
+    const el = document.getElementById('form-order')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
+      {/* Universal Sticky Header */}
+      <Header currentView={currentView} setCurrentView={setCurrentView} />
 
-      <div className="ticks"></div>
+      {/* Main Content Area */}
+      <main className="flex-1 pb-16">
+        {currentView === 'customer' ? (
+          <div>
+            <HeroDualAction onSelectForm={handleScrollToForm} />
+            <OrderForm onSuccess={(order) => setSubmittedOrder(order)} />
+            <FloatingWhatsAppCTA />
+          </div>
+        ) : (
+          <CourierDashboard />
+        )}
+      </main>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* Footer */}
+      <footer className="border-t border-slate-200/80 bg-white py-6 px-4 text-center text-xs text-slate-500">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+              <Bike className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-bold text-slate-800">Dalanta</span>
+            <span>• Jasa Kurir & Titip Beli Lokal</span>
+          </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          <div className="flex items-center gap-4 text-slate-500">
+            <button
+              type="button"
+              onClick={() => setCurrentView(currentView === 'customer' ? 'courier' : 'customer')}
+              className="hover:text-emerald-700 font-semibold transition-colors underline underline-offset-4"
+            >
+              {currentView === 'customer' ? 'Buka Dashboard Kurir' : 'Kembali ke Form Pelanggan'}
+            </button>
+            <span>COD & Talangan Belanja</span>
+          </div>
+        </div>
+      </footer>
+
+      {/* Success Modal */}
+      {submittedOrder && (
+        <OrderSuccessModal
+          order={submittedOrder}
+          onClose={() => setSubmittedOrder(null)}
+          onGoToDashboard={() => {
+            setSubmittedOrder(null)
+            setCurrentView('courier')
+          }}
+        />
+      )}
+    </div>
   )
 }
-
-export default App

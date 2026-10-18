@@ -56,20 +56,20 @@ otes: Catatan khusus untuk kurir
 
 ---
 
-### Milestone 2: Modul A - Halaman Publik & Form Pemesanan (Customer) [PRIORITAS BERIKUTNYA]
-- [ ] **Komponen Header & Branding Dalanta**:
+### Milestone 2: Modul A - Halaman Publik & Form Pemesanan (Customer) [SELESAI]
+- [x] **Komponen Header & Branding Dalanta**:
   - Logo/Identitas Dalanta yang bersih dan profesional
   - Badge status ketersediaan kurir (*"Kurir Siap Melayani"* / Jam Operasional)
-- [ ] **Komponen Dual Action Hero**:
+- [x] **Komponen Dual Action Hero**:
   - Pilihan cepat: **Isi Form Pemesanan** vs **Chat WhatsApp Langsung**
-- [ ] **Komponen Formulir Pemesanan Mandiri**:
+- [x] **Komponen Formulir Pemesanan Mandiri**:
   - Input nama & nomor WhatsApp (dengan tombol validasi format nomor)
   - Pilihan jenis layanan: Antar Paket vs Titip Beli (Errand)
   - Input alamat penjemputan (Pickup) + catatan patokan
   - Input alamat pengantaran (Drop-off) + catatan patokan
   - Input opsional: Estimasi talangan belanja & detail barang titipan
   - Tombol Submit dengan indikator loading dan validasi interaktif
-- [ ] **Tombol Pintasan WhatsApp Otomatis (Direct Order)**:
+- [x] **Tombol Pintasan WhatsApp Otomatis (Direct Order)**:
   - Tombol aksi utama dengan tautan langsung ke nomor WhatsApp kurir
   - Template pesan otomatis rapi:
     `	ext
@@ -80,24 +80,24 @@ otes: Catatan khusus untuk kurir
     Lokasi Antar: 
     Catatan: 
     `
-- [ ] **Konfirmasi Pemesanan (Success State / Modal)**:
+- [x] **Konfirmasi Pemesanan (Success State / Modal)**:
   - Tampilan ringkasan pesanan setelah form dikirim
   - Tombol untuk konfirmasi ke WhatsApp kurir bahwa form sudah diisi
   - Indikator status pesanan awal (Pending)
 
 ---
 
-### Milestone 3: Modul B - Dashboard Kurir (Driver Partner)
-- [ ] **Navigasi / Switch Mode Kurir**:
+### Milestone 3: Modul B - Dashboard Kurir (Driver Partner) [SELESAI & TERHUBUNG]
+- [x] **Navigasi / Switch Mode Kurir**:
   - Tombol toggle/navigasi yang mudah diakses kurir (misal header toggle atau route /kurir)
-- [ ] **Summary Cards (Statistik Cepat Hari Ini)**:
+- [x] **Summary Cards (Statistik Cepat Hari Ini)**:
   - Total pesanan hari ini
   - Pesanan aktif (Pending / On the way)
   - Pesanan selesai & total talangan tercatat
-- [ ] **Feed Pesanan Masuk (Order Feed)**:
+- [x] **Feed Pesanan Masuk (Order Feed)**:
   - Daftar kartu pesanan (Order Cards) dengan badge status warna berkontras tinggi
   - Filter pesanan berdasarkan status (Semua, Baru Masuk, Dalam Proses, Selesai)
-- [ ] **Aksi Cepat Tiap Pesanan (Driver Quick Actions)**:
+- [x] **Aksi Cepat Tiap Pesanan (Driver Quick Actions)**:
   - 🗺️ **Shortcut Google Maps**:
     - Tombol *"Rute Jemput"* (membuka Google Maps turn-by-turn ke alamat pickup)
     - Tombol *"Rute Antar"* (membuka Google Maps turn-by-turn ke alamat drop-off)
@@ -108,7 +108,7 @@ otes: Catatan khusus untuk kurir
       - Pending ➔ Klik *"Mulai Jemput"* ➔ Picking Up
       - Picking Up ➔ Klik *"Barang Diambil & Berangkat"* ➔ Delivering
       - Delivering ➔ Klik *"Selesai & Diterima"* ➔ Completed
-- [ ] **Pencatatan Manual Pesanan WhatsApp**:
+- [x] **Pencatatan Manual Pesanan WhatsApp**:
   - Tombol *"Tambah Order Manual (via WA)"*
   - Modal form kilat agar order yang masuk lewat chat langsung tetap rapi tercatat di pembukuan kurir
 

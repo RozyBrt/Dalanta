@@ -77,17 +77,17 @@
   - [x] Implementasi initial mock data untuk pengujian flow kurir & pelanggan (src/data/mockOrders.js)
 
 - [ ] **Fase 3: Implementasi Modul A (Customer Facing)**
-  - [ ] Desain Mobile-First Landing page yang modern, bersih, dan meyakinkan
-  - [ ] Komponen Dual Action Hero
-  - [ ] Komponen Form Pemesanan Interaktif dengan validasi
-  - [ ] Feedback state saat order terkirim (Success modal / Tracking link preview)
-  - [ ] Tombol CTA WhatsApp floating / fixed
+  - [x] Desain Mobile-First Landing page yang modern, bersih, dan meyakinkan
+  - [x] Komponen Dual Action Hero (src/components/HeroDualAction.jsx)
+  - [x] Komponen Form Pemesanan Interaktif dengan validasi (src/components/OrderForm.jsx)
+  - [x] Feedback state saat order terkirim (src/components/OrderSuccessModal.jsx)
+  - [x] Tombol CTA WhatsApp floating / fixed (src/components/FloatingWhatsAppCTA.jsx)
 
 - [ ] **Fase 4: Implementasi Modul B (Courier Dashboard)**
-  - [ ] Tampilan Feed Pesanan berbasis kartu (Order Cards)
-  - [ ] Tombol pengubah status interaktif (Pending -> Picking Up -> Delivering -> Completed)
-  - [ ] Shortcut Google Maps & tombol hubungi pelanggan via WA
-  - [ ] Modal/Form tambah order manual dari WA
+  - [x] Tampilan Feed Pesanan berbasis kartu (src/components/CourierDashboard.jsx)
+  - [x] Tombol pengubah status interaktif (Pending -> Picking Up -> Delivering -> Completed)
+  - [x] Shortcut Google Maps & tombol hubungi pelanggan via WA
+  - [x] Modal/Form tambah order manual dari WA
 
 - [ ] **Fase 5: Polishing, Testing & Integrasi Realtime**
   - [ ] Pengujian responsivitas mobile di berbagai ukuran layar
@@ -97,6 +97,12 @@
 ---
 
 ## 5. Log Perubahan (Changelog)
+
+### [2026-10-18 - Milestone 2 & 3: UI Pelanggan & Dashboard Kurir Selesai]
+- Menyelesaikan seluruh komponen Modul A (Header, HeroDualAction, OrderForm, OrderSuccessModal, FloatingWhatsAppCTA).
+- Menyelesaikan seluruh komponen Modul B (CourierDashboard, Order Feed Cards, Quick Google Maps, WhatsApp Chat Action, Status Lifecycle Advancer, Modal Input Manual WA).
+- Mengintegrasikan antislop UX: Kontras warna tinggi, touch target mobile >= 44px, teks manusiawi khas Indonesia.
+- Memvalidasi build Vite produksi sukses.
 
 ### [2026-10-18 - Milestone 1: Arsitektur Data & State Selesai]
 - Menyelesaikan Milestone 1: pembuatan src/models/order.js, data mock realistis src/data/mockOrders.js, dan src/context/OrderContext.jsx.
